@@ -13,9 +13,41 @@ from engine.utils import (
 class DataProfiler:
     """
     データの性質をざっくり診断するクラス
+
+    判定方針
+    ----------
+    1. ID候補を抽出する
+       - 列名がIDらしい
+       - またはユニーク率がかなり高い
+    2. ID候補のうち、重複がある列を確認する
+    3. ロング型で繰り返し軸になりやすい列を抽出する
+    4. それらをもとに wide / long / uncertain を推定する
+
+    注意
+    ----------
+    以前は「ID候補に重複がある」だけで long に寄りやすかったため、
+    今回は long 判定を少し慎重にしている。
     """
 
+    # ID候補とみなすユニーク率のしきい値
+    ID_UNIQUE_RATIO_THRESHOLD = 0.95
+
+    # ロング型の繰り返し軸として比較的使われやすいキーワード
+    # 「年」「学部」「学科」など広すぎるものは外し、誤判定を減らす
+    GROUP_KEYWORDS = [
+        "年度",
+        "学期",
+        "semester",
+        "time",
+        "時点",
+        "科目",
+        "設問",
+    ]
+
     def diagnose_structure(self, df: pd.DataFrame) -> DataDiagnosis:
+        """
+        データ構造を診断して、wide / long / uncertain を推定する
+        """
         reasons: list[str] = []
         id_candidates: list[str] = []
         repeated_id_candidates: list[str] = []
@@ -23,53 +55,61 @@ class DataProfiler:
 
         # -----------------------------
         # ID候補の抽出
-        # 列名がID的、またはユニーク率が高い列を候補にする
         # -----------------------------
         for col in df.columns:
             s = df[col]
             unique_ratio = safe_unique_ratio(s)
 
-            if is_probably_id_name(col) or unique_ratio > 0.8:
+            # 列名がIDっぽい、またはユニーク率がかなり高い列を候補にする
+            if is_probably_id_name(col) or unique_ratio >= self.ID_UNIQUE_RATIO_THRESHOLD:
                 id_candidates.append(col)
 
         # -----------------------------
-        # ID重複の確認
+        # ID候補のうち、重複を含む列を抽出
         # -----------------------------
         for col in id_candidates:
-            if df[col].duplicated().any():
+            # 欠損を除いて重複を見る
+            non_na = df[col].dropna()
+            if non_na.duplicated().any():
                 repeated_id_candidates.append(col)
 
         # -----------------------------
         # グループ分け候補の抽出
-        # ロング型で繰り返しの軸になりやすい列を候補にする
         # -----------------------------
-        group_keywords = ["年度", "年", "学期", "semester", "time", "時点", "科目", "項目", "設問", "学部", "学科"]
         for col in df.columns:
-            if any(k.lower() in str(col).lower() for k in group_keywords):
+            col_lower = str(col).lower()
+            if any(keyword.lower() in col_lower for keyword in self.GROUP_KEYWORDS):
                 likely_groupby_candidates.append(col)
 
         # -----------------------------
-        # ワイド型 / ロング型の簡易推定
+        # wide / long / uncertain の判定
         # -----------------------------
-        if repeated_id_candidates and likely_groupby_candidates:
+        has_repeated_id = len(repeated_id_candidates) > 0
+        has_group_axis = len(likely_groupby_candidates) > 0
+
+        if has_repeated_id and has_group_axis:
             mode_suggested = "long"
             reasons.append(
                 "ID候補列に同じ値が複数回出現しており、"
-                "年度や科目のような繰り返しの軸になりそうな列もあるため、"
+                "さらに年度・学期・科目・設問のような繰り返し軸になりそうな列もあるため、"
                 "ロング型と推定しました。"
             )
-        elif repeated_id_candidates:
-            mode_suggested = "long"
+
+        elif has_repeated_id:
+            mode_suggested = "uncertain"
             reasons.append(
-                "ID候補列に同じ値が複数回出現しているため、"
-                "ロング型と推定しました。"
+                "ID候補列に重複が見られますが、"
+                "ロング型と断定できるだけの繰り返し軸は十分に確認できなかったため、"
+                "判定は保留としました。"
             )
+
         elif id_candidates:
             mode_suggested = "wide"
             reasons.append(
-                "ID候補列の値がほぼすべて異なるため、"
+                "ID候補列の値がほぼ一意であるため、"
                 "ワイド型と推定しました。"
             )
+
         else:
             mode_suggested = "uncertain"
             reasons.append(
@@ -88,9 +128,22 @@ class DataProfiler:
     def profile_columns(self, df: pd.DataFrame, id_col: str | None = None) -> ColumnProfile:
         """
         各列の型をざっくり分類する
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            入力データ
+        id_col : str | None
+            ID列として明示指定された列名
+
+        Returns
+        -------
+        ColumnProfile
+            数値列・順序列・カテゴリ列・ID列の分類結果
         """
         profile = ColumnProfile()
 
+        # 少ないユニーク数を持つ数値列を順序尺度候補として拾う
         ordinal_candidates = set(detect_ordinal_candidates(df))
 
         for col in df.columns:
