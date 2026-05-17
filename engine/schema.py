@@ -3,10 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 
-# グループあたりの最小行数（これを下回ると警告を表示する）
-MIN_GROUP_SIZE = 15
-
-
 @dataclass
 class DataDiagnosis:
     """データ診断結果を保持するクラス"""
@@ -22,7 +18,6 @@ class ColumnProfile:
     ordinal_cols: List[str] = field(default_factory=list)
     categorical_cols: List[str] = field(default_factory=list)
     id_cols: List[str] = field(default_factory=list)
-    excluded_cols: List[str] = field(default_factory=list)
 
 
 @dataclass

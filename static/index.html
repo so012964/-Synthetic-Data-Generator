@@ -489,6 +489,13 @@
   // ── Generate ──────────────────────────────────────────────────────────────
   async function doGenerate() {
     const btn = document.getElementById('gen-btn');
+
+    const totalChecked = getCheckedCols('num').length + getCheckedCols('ord').length + getCheckedCols('cat').length;
+    if (totalChecked === 0) {
+      setMsg('gen-msg', 'warn', '列が1つも選択されていません。数値列・順序列・カテゴリ列のいずれかにチェックを入れてください。');
+      return;
+    }
+
     btn.disabled = true;
     setMsg('gen-msg', 'info', '<span class="spinner"></span> 生成中...');
 

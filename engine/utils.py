@@ -63,20 +63,3 @@ def detect_ordinal_candidates(df: pd.DataFrame, max_unique: int = 10) -> list[st
     return candidates
 
 
-def coerce_numeric(series: pd.Series) -> pd.Series:
-    """
-    数値変換できるものは数値へ寄せる
-    """
-    return pd.to_numeric(series, errors="coerce")
-
-
-def sample_from_distribution(
-    values: np.ndarray,
-    probs: np.ndarray,
-    size: int,
-    rng: np.random.Generator,
-) -> np.ndarray:
-    """
-    離散分布からサンプルする
-    """
-    return rng.choice(values, size=size, p=probs)
