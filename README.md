@@ -1,2 +1,57 @@
-# -Synthetic-Data-Generator
-Streamlit app for generating synthetic tabular data from CSV/Excel to test analytics pipelines and dashboards.
+# Synthetic Data Generator
+
+CSV / Excel ファイルの構造・分布を参考に、分析パイプラインの動作確認用の合成データを生成する Web アプリケーションです。
+
+## 主な機能
+
+| 機能 | 内容 |
+|------|------|
+| ファイル読み込み | CSV（UTF-8 / Shift-JIS）・Excel（.xlsx / .xls）に対応。複数シートの選択も可能 |
+| データ絞り込み | 指定列の値を選択してフィルタリングしてから生成できる |
+| 列タイプ設定 | 数値列 / 順序列 / カテゴリ列を手動で指定（排他選択）|
+| ID列の匿名化 | 学籍番号などを人工 ID（`SID-XXXX`）に自動置換 |
+| 生成行数の指定 | 元データと同じ行数、または任意の行数（最大 100,000 行）|
+| 統計比較 | 基本統計量・相関係数行列で元データと合成データを並べて比較 |
+| ダウンロード | CSV・Excel 形式で出力 |
+
+## セットアップ
+
+Python 3.10 以上が必要です。
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/so012964/-Synthetic-Data-Generator.git
+cd -Synthetic-Data-Generator
+
+# 依存パッケージをインストール
+pip install -r requirements.txt
+
+# サーバーを起動
+uvicorn app:app --reload
+```
+
+ブラウザで `http://localhost:8000` を開いてください。
+
+## 使い方
+
+### Step 1 — ファイルのアップロード
+CSV または Excel ファイルをドラッグ＆ドロップ、またはクリックして選択します。  
+Excel の場合、複数シートがあれば対象シートを選択できます。
+
+### Step 2 — データの確認と絞り込み
+先頭 5 行のプレビューでデータ内容を確認します。  
+必要であれば「絞り込みを使う」にチェックを入れ、列と残す値を選択してください。
+
+### Step 3 — 設定
+以下の項目を確認・調整します。
+
+- **ID 列** — 匿名化する列を選択（候補を自動検出）
+- **列の性質** — 数値列 / 順序列 / カテゴリ列のいずれかを列ごとに選択（1 列につき 1 タイプのみ指定可）
+- **生成行数** — 元データと同じ行数か、任意の行数を指定
+
+### Step 4 — 生成・ダウンロード
+「Generate」ボタンを押すと合成データが生成されます。  
+プレビューを確認後、CSV または Excel でダウンロードできます。
+
+### Step 5 — 統計比較
+数値列が含まれる場合、元データと合成データの基本統計量・相関係数行列を比較できます。
