@@ -11,11 +11,7 @@ MIN_GROUP_SIZE = 15
 class DataDiagnosis:
     """データ診断結果を保持するクラス"""
 
-    mode_suggested: str  # "wide", "long", "uncertain"
     id_candidates: List[str] = field(default_factory=list)
-    repeated_id_candidates: List[str] = field(default_factory=list)
-    likely_groupby_candidates: List[str] = field(default_factory=list)
-    reasons: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -33,11 +29,9 @@ class ColumnProfile:
 class GenerationConfig:
     """生成設定"""
 
-    mode: str  # "wide" or "long"
     id_col: Optional[str]
     add_row_id: bool
     row_id_col: str = "synthetic_row_id"
-    groupby_cols: List[str] = field(default_factory=list)
     numeric_cols: List[str] = field(default_factory=list)
     ordinal_cols: List[str] = field(default_factory=list)
     categorical_cols: List[str] = field(default_factory=list)

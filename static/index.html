@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Synthetic Data Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F8F7F4; color: #2D3436; min-height: 100vh; }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    header { border-bottom: 2px solid #6B9080; padding-bottom: 0.6rem; margin-bottom: 1.5rem; }
+    header h1 { color: #2D3436; font-size: 1.6rem; font-weight: 600; letter-spacing: 0.02em; }
+    header p { color: #636e72; margin-top: 0.4rem; font-size: 0.9rem; }
+
+    .section { background: white; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .section h2 { color: #3D5A4C; font-size: 1.05rem; font-weight: 600; margin-bottom: 1rem; }
+    .section h3 { color: #3D5A4C; font-size: 0.95rem; font-weight: 500; margin-bottom: 0.5rem; }
+
+    .upload-area { border: 2px dashed #B2C9BE; border-radius: 8px; padding: 2.5rem; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .upload-area:hover, .upload-area.drag-over { border-color: #6B9080; background: #f0f5f3; }
+    .upload-area .upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .upload-area p { color: #636e72; font-size: 0.9rem; line-height: 1.6; }
+
+    .info-box  { background: #EBF3EF; border-left: 3px solid #6B9080; border-radius: 4px; padding: 0.7rem 1rem; font-size: 0.875rem; color: #3D5A4C; margin-bottom: 1rem; }
+    .warn-box  { background: #FFF8E7; border-left: 3px solid #F59E0B; border-radius: 4px; padding: 0.7rem 1rem; font-size: 0.875rem; color: #92400E; margin-bottom: 0.75rem; }
+    .error-box { background: #FEE2E2; border-left: 3px solid #EF4444; border-radius: 4px; padding: 0.7rem 1rem; font-size: 0.875rem; color: #B91C1C; margin-bottom: 0.75rem; }
+    .ok-box    { background: #ECFDF5; border-left: 3px solid #10B981; border-radius: 4px; padding: 0.7rem 1rem; font-size: 0.875rem; color: #065F46; margin-bottom: 0.75rem; }
+
+    label { display: block; font-size: 0.875rem; font-weight: 500; color: #4B5563; margin-bottom: 0.3rem; }
+    select, input[type="number"] { width: 100%; padding: 0.45rem 0.65rem; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.875rem; background: white; color: #2D3436; }
+    select:focus, input[type="number"]:focus { outline: none; border-color: #6B9080; box-shadow: 0 0 0 2px rgba(107,144,128,0.2); }
+
+    .check-row { display: flex; align-items: center; gap: 0.5rem; }
+    .check-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #6B9080; cursor: pointer; flex-shrink: 0; }
+    .check-row label { margin: 0; font-weight: normal; cursor: pointer; }
+
+    .tag-box { border: 1px solid #D1D5DB; border-radius: 6px; max-height: 160px; overflow-y: auto; padding: 0.4rem; background: white; }
+    .tag-item { display: flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.3rem; border-radius: 4px; cursor: pointer; }
+    .tag-item:hover { background: #F0F5F3; }
+    .tag-item input[type="checkbox"] { accent-color: #6B9080; width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
+    .tag-item label { font-size: 0.84rem; cursor: pointer; margin: 0; color: #374151; }
+
+    .mini-actions { display: flex; gap: 0.4rem; margin-bottom: 0.35rem; }
+    .mini-btn { font-size: 0.75rem; padding: 0.18rem 0.5rem; background: #F0F5F3; border: 1px solid #B2C9BE; border-radius: 4px; cursor: pointer; color: #3D5A4C; }
+    .mini-btn:hover { background: #D4E8DF; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.4rem; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: #6B9080; color: white; }
+    .btn-primary:hover:not(:disabled) { background: #5A7A6C; }
+    .btn-primary:disabled { background: #B2C9BE; cursor: not-allowed; }
+    .btn-outline { background: #F0EDE8; color: #2D3436; border: 1px solid #D5CEC5; }
+    .btn-outline:hover { background: #E5E0D9; }
+    .btn-lg { padding: 0.7rem 2.2rem; font-size: 1rem; }
+
+    .table-wrap { overflow-x: auto; overflow-y: auto; max-height: 400px; border-radius: 8px; border: 1px solid #E5E7EB; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    thead { position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    thead tr { background: #F9FAFB; }
+    th { padding: 0.45rem 0.7rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #E5E7EB; white-space: nowrap; }
+    tbody tr:hover { background-color: #F3F4F6; }
+    td { padding: 0.4rem 0.7rem; color: #4B5563; border-bottom: 1px solid #F3F4F6; }
+    tr:last-child td { border-bottom: none; }
+
+    .radio-row { display: flex; gap: 1.2rem; }
+    .radio-item { display: flex; align-items: center; gap: 0.35rem; }
+    .radio-item input[type="radio"] { accent-color: #6B9080; cursor: pointer; }
+    .radio-item label { margin: 0; font-weight: normal; font-size: 0.875rem; cursor: pointer; }
+
+    .badge { display: inline-block; background: #EBF3EF; color: #3D5A4C; padding: 0.15rem 0.55rem; border-radius: 99px; font-size: 0.75rem; font-weight: 500; margin-right: 0.3rem; }
+    .badge-empty { display: inline-block; background: #F3F4F6; color: #9CA3AF; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: normal; }
+
+    .spinner { display: inline-block; width: 15px; height: 15px; border: 2px solid #B2C9BE; border-top-color: #6B9080; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    hr { border: none; border-top: 1px solid #E5E7EB; margin: 1rem 0; }
+    .caption { font-size: 0.8rem; color: #9CA3AF; margin-top: 0.3rem; }
+    .hidden { display: none !important; }
+    .mb-1 { margin-bottom: 0.75rem; }
+    .mb-2 { margin-bottom: 1rem; }
+    .field { margin-bottom: 1rem; max-width: 360px; }
+
+    @media (max-width: 640px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Synthetic Data Generator</h1>
+    <p>元データの構造や分布を参考にしながら、分析パイプラインの動作確認に使えるデータを生成します。</p>
+  </header>
+
+  <!-- Step 1: Upload -->
+  <div class="section">
+    <h2>1. ファイルのアップロード</h2>
+    <div class="info-box">CSV はそのまま読み込みます。Excel はシートが複数ある場合に対象シートを選択できます。</div>
+    <div class="upload-area" id="upload-area">
+      <div class="upload-icon">📂</div>
+      <p><strong>クリックまたはドラッグ＆ドロップ</strong></p>
+      <p>CSV / Excel (.csv, .xlsx, .xls)</p>
+      <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display:none">
+    </div>
+    <div id="upload-msg" style="margin-top:0.75rem;"></div>
+  </div>
+
+  <!-- Step 2: Data & Filter -->
+  <div class="section hidden" id="sec-filter">
+    <h2>2. データの確認と絞り込み</h2>
+
+    <div class="field hidden" id="sheet-wrap">
+      <label for="sheet-sel">対象シート</label>
+      <select id="sheet-sel"></select>
+    </div>
+
+    <h3>プレビュー</h3>
+    <div id="preview-tbl" class="table-wrap mb-2"></div>
+
+    <hr>
+    <h3>絞り込み（任意）</h3>
+    <p class="caption mb-1">必要に応じて生成前にデータを絞り込めます。使わない場合はそのまま進めてください。</p>
+
+    <div class="check-row mb-1">
+      <input type="checkbox" id="use-filter">
+      <label for="use-filter">絞り込みを使う</label>
+    </div>
+
+    <div id="filter-opts" class="hidden">
+      <div class="field">
+        <label for="filter-col">絞り込みに使う列</label>
+        <select id="filter-col"></select>
+      </div>
+      <div id="filter-val-wrap" class="hidden mb-1">
+        <label>残す値</label>
+        <div class="mini-actions">
+          <button class="mini-btn" onclick="filterSelAll()">すべて選択</button>
+          <button class="mini-btn" onclick="filterSelNone()">すべて解除</button>
+        </div>
+        <div id="filter-val-list" class="tag-box"></div>
+      </div>
+      <div id="filter-warn" class="warn-box hidden"></div>
+    </div>
+
+    <p id="row-count-caption" class="caption"></p>
+  </div>
+
+  <!-- Step 3: Settings -->
+  <div class="section hidden" id="sec-settings">
+    <h2>3. 設定</h2>
+
+    <div class="mb-2">
+      <h3>データ診断 — ID候補列</h3>
+      <div id="id-candidates" class="caption" style="margin-top:0.3rem;"></div>
+    </div>
+
+    <hr>
+
+    <div class="field">
+      <label for="id-col">ID列（学籍番号など）</label>
+      <select id="id-col"></select>
+      <p class="caption">生成時に人工IDへ自動置換されます。</p>
+    </div>
+
+    <div class="check-row mb-2">
+      <input type="checkbox" id="add-row-id">
+      <label for="add-row-id">各行に通し番号をつける（ROW_000001, ...）</label>
+    </div>
+
+    <div class="field" style="max-width:180px;">
+      <label for="random-state">乱数シード</label>
+      <input type="number" id="random-state" min="0" value="42" step="1">
+    </div>
+
+    <hr>
+    <h3>列の性質</h3>
+    <p class="caption mb-1">自動判定しました。必要に応じて修正してください。</p>
+
+    <div class="grid-3 mb-2">
+      <div>
+        <label>数値列</label>
+        <div class="mini-actions">
+          <button class="mini-btn" onclick="colSelAll('num')">すべて選択</button>
+          <button class="mini-btn" onclick="colSelNone('num')">すべて解除</button>
+        </div>
+        <div id="col-num" class="tag-box"></div>
+      </div>
+      <div>
+        <label>順序列（5段階評価など）</label>
+        <div class="mini-actions">
+          <button class="mini-btn" onclick="colSelAll('ord')">すべて選択</button>
+          <button class="mini-btn" onclick="colSelNone('ord')">すべて解除</button>
+        </div>
+        <div id="col-ord" class="tag-box"></div>
+      </div>
+      <div>
+        <label>カテゴリ列（学部・性別など）</label>
+        <div class="mini-actions">
+          <button class="mini-btn" onclick="colSelAll('cat')">すべて選択</button>
+          <button class="mini-btn" onclick="colSelNone('cat')">すべて解除</button>
+        </div>
+        <div id="col-cat" class="tag-box"></div>
+      </div>
+    </div>
+
+    <hr>
+    <h3>生成行数</h3>
+    <div class="radio-row mb-1">
+      <div class="radio-item">
+        <input type="radio" name="nrows-mode" id="nrows-same" value="same" checked>
+        <label for="nrows-same">元データと同じ</label>
+      </div>
+      <div class="radio-item">
+        <input type="radio" name="nrows-mode" id="nrows-custom" value="custom">
+        <label for="nrows-custom">指定する</label>
+      </div>
+    </div>
+    <div class="field hidden" id="nrows-input-wrap">
+      <label for="nrows-val">生成行数</label>
+      <input type="number" id="nrows-val" min="1" max="100000" value="100" step="1" style="max-width:160px;">
+    </div>
+    <p id="planned-rows" class="caption"></p>
+  </div>
+
+  <!-- Generate -->
+  <div class="hidden" id="sec-gen" style="text-align:center; margin-bottom:1.25rem;">
+    <button class="btn btn-primary btn-lg" id="gen-btn" onclick="doGenerate()">Generate</button>
+    <div id="gen-msg" style="margin-top:0.75rem;"></div>
+  </div>
+
+  <!-- Step 4: Result -->
+  <div class="section hidden" id="sec-result">
+    <h2>4. 生成結果</h2>
+    <div id="result-summary" class="ok-box"></div>
+    <h3 style="margin-bottom:0.5rem;">プレビュー（先頭50行）</h3>
+    <div id="result-tbl" class="table-wrap mb-2"></div>
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="doDownload('csv')">CSV をダウンロード</button>
+      <button class="btn btn-outline" onclick="doDownload('xlsx')">Excel をダウンロード</button>
+    </div>
+  </div>
+
+  <!-- Step 5: Stats comparison -->
+  <div class="section hidden" id="sec-stats">
+    <h2>5. 統計比較</h2>
+    <div id="stats-no-numeric" class="warn-box hidden">数値列が選択されていないため、統計比較はありません。</div>
+
+    <div id="stats-body" class="hidden">
+      <h3>基本統計量</h3>
+      <p class="caption mb-1">元データ（絞り込み後）と合成データを比較します。</p>
+      <div class="grid-2" style="margin-bottom:1.5rem;">
+        <div>
+          <p style="font-size:0.85rem; font-weight:600; color:#3D5A4C; margin-bottom:0.4rem;">元データ</p>
+          <div id="stats-orig-tbl" class="table-wrap"></div>
+        </div>
+        <div>
+          <p style="font-size:0.85rem; font-weight:600; color:#3D5A4C; margin-bottom:0.4rem;">合成データ</p>
+          <div id="stats-syn-tbl" class="table-wrap"></div>
+        </div>
+      </div>
+
+      <div id="corr-section" class="hidden">
+        <hr>
+        <h3 style="margin-top:1rem;">相関係数行列</h3>
+        <p class="caption mb-1">セルの色：青 = 負の相関、白 = 無相関、赤 = 正の相関</p>
+        <div class="grid-2">
+          <div>
+            <p style="font-size:0.85rem; font-weight:600; color:#3D5A4C; margin-bottom:0.4rem;">元データ</p>
+            <div id="corr-orig" class="table-wrap" style="overflow-x:auto;"></div>
+          </div>
+          <div>
+            <p style="font-size:0.85rem; font-weight:600; color:#3D5A4C; margin-bottom:0.4rem;">合成データ</p>
+            <div id="corr-syn" class="table-wrap" style="overflow-x:auto;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── State ─────────────────────────────────────────────────────────────────
+  const S = {
+    fileId: null, fileName: null, sheetNames: null,
+    columns: [], rowCount: 0, idCandidates: [],
+    columnProfile: { numeric_cols: [], ordinal_cols: [], categorical_cols: [] },
+    filterOptions: {},
+    resultId: null,
+  };
+
+  // ── Upload ────────────────────────────────────────────────────────────────
+  const uploadArea = document.getElementById('upload-area');
+  const fileInput  = document.getElementById('file-input');
+
+  uploadArea.addEventListener('click', () => fileInput.click());
+  uploadArea.addEventListener('dragover',  e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+  uploadArea.addEventListener('drop', e => {
+    e.preventDefault(); uploadArea.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) doUpload(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) doUpload(e.target.files[0]); });
+
+  async function doUpload(file) {
+    setMsg('upload-msg', 'info', '<span class="spinner"></span> アップロード中...');
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const data = await apiFetch('/api/upload', { method: 'POST', body: fd });
+      Object.assign(S, {
+        fileId: data.file_id, fileName: data.file_name,
+        sheetNames: data.sheet_names, columns: data.columns,
+        rowCount: data.row_count, idCandidates: data.id_candidates,
+        columnProfile: data.column_profile, filterOptions: data.filter_options,
+      });
+      setMsg('upload-msg', 'ok', `✓ ${esc(data.file_name)} を読み込みました（${data.row_count.toLocaleString()} 行）`);
+      initFilterSection(data);
+      initSettingsSection(data);
+      show('sec-filter'); show('sec-settings'); show('sec-gen');
+    } catch (e) {
+      setMsg('upload-msg', 'err', `エラー: ${esc(e.message)}`);
+    }
+  }
+
+  // ── Filter section ────────────────────────────────────────────────────────
+  function initFilterSection(data) {
+    // Sheet select
+    const sheetWrap = document.getElementById('sheet-wrap');
+    const sheetSel  = document.getElementById('sheet-sel');
+    if (data.sheet_names && data.sheet_names.length > 1) {
+      sheetSel.innerHTML = data.sheet_names.map(s => `<option>${esc(s)}</option>`).join('');
+      sheetSel.onchange = () => refreshProfile();
+      sheetWrap.classList.remove('hidden');
+    } else {
+      sheetWrap.classList.add('hidden');
+    }
+
+    renderTable('preview-tbl', data.preview, data.columns);
+
+    // Filter col select
+    const filterColEl = document.getElementById('filter-col');
+    filterColEl.innerHTML = data.columns.map(c => `<option>${esc(c)}</option>`).join('');
+    filterColEl.onchange = onFilterColChange;
+
+    document.getElementById('use-filter').onchange = function () {
+      const el = document.getElementById('filter-opts');
+      if (this.checked) { el.classList.remove('hidden'); onFilterColChange(); }
+      else              { el.classList.add('hidden'); setRowCount(data.row_count); refreshProfile(); }
+    };
+
+    setRowCount(data.row_count);
+  }
+
+  function onFilterColChange() {
+    const col   = document.getElementById('filter-col').value;
+    const opts  = S.filterOptions[col];
+    const listEl = document.getElementById('filter-val-list');
+    const warnEl = document.getElementById('filter-warn');
+    const wrap   = document.getElementById('filter-val-wrap');
+
+    if (opts) {
+      warnEl.classList.add('hidden');
+      wrap.classList.remove('hidden');
+      listEl.innerHTML = opts.map((v, i) => `
+        <div class="tag-item">
+          <input type="checkbox" id="fv${i}" value="${esc(v)}" checked onchange="refreshProfileLazy()">
+          <label for="fv${i}">${esc(v)}</label>
+        </div>`).join('');
+    } else {
+      wrap.classList.add('hidden');
+      warnEl.textContent = 'この列は異なる値が多いため一覧選択できません。異なる値の少ない列を選んでください。';
+      warnEl.classList.remove('hidden');
+    }
+    refreshProfileLazy();
+  }
+
+  function filterSelAll()  { qall('#filter-val-list input').forEach(c => c.checked = true);  refreshProfileLazy(); }
+  function filterSelNone() { qall('#filter-val-list input').forEach(c => c.checked = false); refreshProfileLazy(); }
+
+  function getFilter() {
+    if (!document.getElementById('use-filter').checked) return { col: null, vals: null };
+    const col  = document.getElementById('filter-col').value;
+    const vals = qall('#filter-val-list input:checked').map(c => c.value);
+    return { col, vals };
+  }
+
+  let _profileTimer = null;
+  function refreshProfileLazy() { clearTimeout(_profileTimer); _profileTimer = setTimeout(refreshProfile, 400); }
+
+  async function refreshProfile() {
+    if (!S.fileId) return;
+    const sheet  = document.getElementById('sheet-sel').value || null;
+    const { col, vals } = getFilter();
+    const idCol  = document.getElementById('id-col').value;
+
+    try {
+      const data = await apiFetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_id: S.fileId, sheet_name: sheet || null,
+          filter_col: col || null, filter_values: vals,
+          id_col: idCol === 'なし' ? null : idCol || null,
+        }),
+      });
+      S.rowCount = data.row_count;
+      S.idCandidates = data.id_candidates;
+      S.columnProfile = data.column_profile;
+      renderTable('preview-tbl', data.preview, data.columns);
+      setRowCount(data.row_count);
+      renderColLists(data.column_profile, idCol === 'なし' ? null : idCol);
+      updatePlannedRows();
+    } catch (e) {
+      document.getElementById('row-count-caption').innerHTML =
+        `<span style="color:#EF4444;">${esc(e.message)}</span>`;
+    }
+  }
+
+  function setRowCount(n) {
+    document.getElementById('row-count-caption').textContent = `絞り込み後の行数: ${n.toLocaleString()} 行`;
+  }
+
+  // ── Settings section ──────────────────────────────────────────────────────
+  function initSettingsSection(data) {
+    const badge = document.getElementById('id-candidates');
+    badge.innerHTML = data.id_candidates.length
+      ? data.id_candidates.map(c => `<span class="badge">${esc(c)}</span>`).join('')
+      : '候補なし';
+
+    const idColEl = document.getElementById('id-col');
+    idColEl.innerHTML = ['なし', ...data.columns].map(c => `<option>${esc(c)}</option>`).join('');
+    if (data.id_candidates.length) idColEl.value = data.id_candidates[0];
+    idColEl.onchange = () => refreshProfileLazy();
+
+    document.querySelectorAll('input[name="nrows-mode"]').forEach(r => {
+      r.onchange = function () {
+        const wrap = document.getElementById('nrows-input-wrap');
+        this.value === 'custom' ? wrap.classList.remove('hidden') : wrap.classList.add('hidden');
+        updatePlannedRows();
+      };
+    });
+    document.getElementById('nrows-val').oninput = updatePlannedRows;
+
+    renderColLists(data.column_profile, data.id_candidates[0] || null);
+    updatePlannedRows();
+  }
+
+  function renderColLists(profile, idCol) {
+    const all = S.columns.filter(c => c !== idCol);
+    renderTagList('col-num', all, new Set(profile.numeric_cols.filter(c => c !== idCol)), 'num');
+    renderTagList('col-ord', all, new Set(profile.ordinal_cols.filter(c => c !== idCol)), 'ord');
+    renderTagList('col-cat', all, new Set(profile.categorical_cols.filter(c => c !== idCol)), 'cat');
+  }
+
+  function renderTagList(id, cols, checked, type) {
+    document.getElementById(id).innerHTML = cols.map((c, i) => `
+      <div class="tag-item">
+        <input type="checkbox" id="${type}${i}" data-col="${encodeURIComponent(c)}" data-type="${type}" ${checked.has(c) ? 'checked' : ''} onchange="onColTypeChange(this)">
+        <label for="${type}${i}">${esc(c)}</label>
+      </div>`).join('');
+  }
+
+  function onColTypeChange(cb) {
+    if (!cb.checked) return;
+    qall(`input[data-col="${cb.dataset.col}"]`).forEach(other => {
+      if (other !== cb) other.checked = false;
+    });
+  }
+
+  function colSelAll(t) {
+    qall(`input[data-type="${t}"]`).forEach(cb => {
+      cb.checked = true;
+      onColTypeChange(cb);
+    });
+  }
+  function colSelNone(t) { qall(`input[data-type="${t}"]`).forEach(c => c.checked = false); }
+  function getCheckedCols(t) { return qall(`input[data-type="${t}"]:checked`).map(c => decodeURIComponent(c.dataset.col)); }
+
+  function updatePlannedRows() {
+    const mode = document.querySelector('input[name="nrows-mode"]:checked')?.value;
+    const n    = mode === 'custom' ? (parseInt(document.getElementById('nrows-val').value) || 0) : S.rowCount;
+    document.getElementById('planned-rows').textContent = `生成予定行数: ${n.toLocaleString()} 行`;
+  }
+
+  // ── Generate ──────────────────────────────────────────────────────────────
+  async function doGenerate() {
+    const btn = document.getElementById('gen-btn');
+    btn.disabled = true;
+    setMsg('gen-msg', 'info', '<span class="spinner"></span> 生成中...');
+
+    const sheet   = document.getElementById('sheet-sel').value || null;
+    const { col: filterCol, vals: filterVals } = getFilter();
+    const idColRaw = document.getElementById('id-col').value;
+    const idCol    = idColRaw === 'なし' ? null : idColRaw;
+    const addRowId = document.getElementById('add-row-id').checked;
+    const seed     = parseInt(document.getElementById('random-state').value) || 42;
+    const nrowsMode = document.querySelector('input[name="nrows-mode"]:checked')?.value;
+    const nRows    = nrowsMode === 'custom' ? (parseInt(document.getElementById('nrows-val').value) || null) : null;
+
+    try {
+      const data = await apiFetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_id: S.fileId, sheet_name: sheet || null,
+          filter_col: filterCol || null, filter_values: filterVals,
+          id_col: idCol, add_row_id: addRowId,
+          numeric_cols: getCheckedCols('num'),
+          ordinal_cols: getCheckedCols('ord'),
+          categorical_cols: getCheckedCols('cat'),
+          n_rows: nRows, random_state: seed,
+        }),
+      });
+      S.resultId = data.result_id;
+      document.getElementById('result-summary').textContent = `${data.row_count.toLocaleString()} 行のデータを生成しました。`;
+      renderTable('result-tbl', data.preview, data.columns);
+      renderStats(data.stats);
+      show('sec-result');
+      show('sec-stats');
+      document.getElementById('sec-result').scrollIntoView({ behavior: 'smooth' });
+      setMsg('gen-msg', 'ok', '✓ 生成が完了しました');
+    } catch (e) {
+      setMsg('gen-msg', 'err', `エラー: ${esc(e.message)}`);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function doDownload(fmt) {
+    if (S.resultId) window.location.href = `/api/download/${S.resultId}?format=${fmt}`;
+  }
+
+  // ── Stats comparison ──────────────────────────────────────────────────────
+  const STAT_KEYS = ['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max'];
+
+  function renderStats(stats) {
+    if (!stats || !stats.numeric_cols.length) {
+      show('sec-stats');
+      show('stats-no-numeric');
+      document.getElementById('stats-body').classList.add('hidden');
+      return;
+    }
+    document.getElementById('stats-no-numeric').classList.add('hidden');
+    show('stats-body');
+
+    const cols = stats.numeric_cols;
+    document.getElementById('stats-orig-tbl').innerHTML = buildStatsTable(stats.original_stats, cols);
+    document.getElementById('stats-syn-tbl').innerHTML  = buildStatsTable(stats.synthetic_stats, cols);
+
+    if (stats.original_corr && stats.corr_cols.length >= 2) {
+      show('corr-section');
+      document.getElementById('corr-orig').innerHTML = buildHeatmap(stats.original_corr, stats.corr_cols);
+      document.getElementById('corr-syn').innerHTML  = buildHeatmap(stats.synthetic_corr, stats.corr_cols);
+    } else {
+      document.getElementById('corr-section').classList.add('hidden');
+    }
+  }
+
+  function buildStatsTable(statsDict, cols) {
+    const th = `<tr><th>統計量</th>${cols.map(c => `<th title="${esc(c)}">${esc(trunc(c, 12))}</th>`).join('')}</tr>`;
+    const rows = STAT_KEYS.map(k => {
+      const cells = cols.map(c => {
+        const v = statsDict[c]?.[k];
+        return `<td style="text-align:right;">${v != null ? fmtNum(v) : '—'}</td>`;
+      }).join('');
+      return `<tr><td style="font-weight:600;white-space:nowrap;">${esc(k)}</td>${cells}</tr>`;
+    }).join('');
+    return `<table><thead>${th}</thead><tbody>${rows}</tbody></table>`;
+  }
+
+  function buildHeatmap(corrDict, cols) {
+    const th = `<tr><th></th>${cols.map(c => `<th title="${esc(c)}" style="white-space:nowrap;font-size:0.75rem;">${esc(trunc(c, 8))}</th>`).join('')}</tr>`;
+    const rows = cols.map(rowC => {
+      const cells = cols.map(colC => {
+        const v = corrDict[rowC]?.[colC] ?? 0;
+        const bg = corrColor(v);
+        const fg = Math.abs(v) > 0.55 ? '#fff' : '#2D3436';
+        return `<td style="background:${bg};color:${fg};text-align:center;padding:0.35rem 0.5rem;font-size:0.78rem;min-width:48px;">${fmtNum(v)}</td>`;
+      }).join('');
+      return `<tr><th style="white-space:nowrap;font-size:0.75rem;text-align:left;padding-right:0.5rem;" title="${esc(rowC)}">${esc(trunc(rowC, 8))}</th>${cells}</tr>`;
+    }).join('');
+    return `<table style="border-collapse:collapse;"><thead>${th}</thead><tbody>${rows}</tbody></table>`;
+  }
+
+  function corrColor(val) {
+    const v = Math.max(-1, Math.min(1, val));
+    if (v >= 0) {
+      // white → red:  (247,247,247) → (214,96,77)
+      return `rgb(${lerp(247,214,v)},${lerp(247,96,v)},${lerp(247,77,v)})`;
+    } else {
+      // white → blue: (247,247,247) → (33,102,172)
+      const t = -v;
+      return `rgb(${lerp(247,33,t)},${lerp(247,102,t)},${lerp(247,172,t)})`;
+    }
+  }
+
+  function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
+  function fmtNum(v) { return Number.isInteger(v) ? v.toLocaleString() : Number(v).toFixed(4); }
+  function trunc(s, n) { return s.length > n ? s.slice(0, n) + '…' : s; }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  async function apiFetch(url, opts) {
+    const res  = await fetch(url, opts);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'リクエストが失敗しました');
+    return data;
+  }
+
+  function renderTable(id, rows, cols) {
+    const el = document.getElementById(id);
+    if (!rows || !rows.length) { el.innerHTML = '<p class="caption" style="padding:0.5rem;">データなし</p>'; return; }
+    const th = cols.map(c => `<th>${esc(String(c))}</th>`).join('');
+    const tr = rows.map(r => `<tr>${cols.map(c => {
+      const val = r[c];
+      const display = (val === null || val === undefined || val === '')
+        ? '<span class="badge-empty">空</span>'
+        : esc(String(val));
+      return `<td>${display}</td>`;
+    }).join('')}</tr>`).join('');
+    el.innerHTML = `<table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
+  }
+
+  function setMsg(id, type, html) {
+    const cls = { info: 'info-box', ok: 'ok-box', err: 'error-box', warn: 'warn-box' }[type];
+    document.getElementById(id).innerHTML = `<div class="${cls}">${html}</div>`;
+  }
+
+  function show(id) { document.getElementById(id).classList.remove('hidden'); }
+
+  function qall(sel) { return [...document.querySelectorAll(sel)]; }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
